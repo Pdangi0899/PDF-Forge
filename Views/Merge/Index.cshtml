@@ -25,83 +25,83 @@
         user-select: none;
     }
 
-    .file-card:hover {
-        border-color: var(--primary-light);
-        box-shadow: var(--shadow-md);
-    }
+        .file-card:hover {
+            border-color: var(--primary-light);
+            box-shadow: var(--shadow-md);
+        }
 
-    .file-card.dragover {
-        border-color: var(--primary);
-        background: var(--primary-50);
-    }
+        .file-card.dragover {
+            border-color: var(--primary);
+            background: var(--primary-50);
+        }
 
-    .file-card.dragging {
-        opacity: 0.4;
-    }
+        .file-card.dragging {
+            opacity: 0.4;
+        }
 
-    .file-card .drag-handle {
-        color: var(--gray-400);
-        font-size: 1.25rem;
-        cursor: grab;
-        flex-shrink: 0;
-    }
+        .file-card .drag-handle {
+            color: var(--gray-400);
+            font-size: 1.25rem;
+            cursor: grab;
+            flex-shrink: 0;
+        }
 
-    .file-card .file-thumb {
-        flex-shrink: 0;
-        width: 64px;
-        background: var(--gray-100);
-        border-radius: var(--radius-sm);
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
+        .file-card .file-thumb {
+            flex-shrink: 0;
+            width: 64px;
+            background: var(--gray-100);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-    .file-card .file-thumb canvas {
-        max-width: 100%;
-        height: auto;
-        display: block;
-    }
+            .file-card .file-thumb canvas {
+                max-width: 100%;
+                height: auto;
+                display: block;
+            }
 
-    .file-card .file-order {
-        width: 28px;
-        height: 28px;
-        background: var(--primary);
-        color: white;
-        border-radius: 50%;
-        font-size: 0.75rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
+        .file-card .file-order {
+            width: 28px;
+            height: 28px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
 
-    .file-card .file-name {
-        flex: 1;
-        font-weight: 600;
-        color: var(--gray-800);
-        font-size: 0.9375rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+        .file-card .file-name {
+            flex: 1;
+            font-weight: 600;
+            color: var(--gray-800);
+            font-size: 0.9375rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
-    .file-card .file-remove {
-        background: none;
-        border: none;
-        color: var(--gray-400);
-        cursor: pointer;
-        font-size: 1.125rem;
-        padding: 6px 10px;
-        border-radius: var(--radius-sm);
-        transition: var(--transition);
-    }
+        .file-card .file-remove {
+            background: none;
+            border: none;
+            color: var(--gray-400);
+            cursor: pointer;
+            font-size: 1.125rem;
+            padding: 6px 10px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
 
-    .file-card .file-remove:hover {
-        color: var(--danger);
-        background: #fef2f2;
-    }
+            .file-card .file-remove:hover {
+                color: var(--danger);
+                background: #fef2f2;
+            }
 
     .toolbar {
         display: flex;
@@ -112,17 +112,17 @@
         margin: 24px 0 8px;
     }
 
-    .toolbar h3 {
-        font-size: 1rem;
-        font-weight: 700;
-        color: var(--gray-800);
-        margin: 0;
-    }
+        .toolbar h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--gray-800);
+            margin: 0;
+        }
 
-    .toolbar .hint {
-        font-size: 0.8125rem;
-        color: var(--gray-500);
-    }
+        .toolbar .hint {
+            font-size: 0.8125rem;
+            color: var(--gray-500);
+        }
 
     .action-bar {
         margin-top: 32px;
@@ -348,25 +348,45 @@
             filesList.appendChild(fileItem);
         });
 
-        renderMergeThumbnails();
+        // Render thumbnails and wait for completion
+        renderMergeThumbnails().catch(err => console.error('Thumbnail rendering error:', err));
     }
 
     async function renderMergeThumbnails() {
-        for (let i = 0; i < fileArrayBuffers.length; i++) {
+        // Clear any existing content first
+        filesList.querySelectorAll('canvas').forEach(canvas => {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+
+        const renderPromises = fileArrayBuffers.map(async (buffer, i) => {
             try {
-                const pdf = await pdfjsLib.getDocument({ data: fileArrayBuffers[i] }).promise;
+                const canvas = document.getElementById('merge-thumb-' + i);
+                if (!canvas) return;
+
+                // Clone the data so PDF.js worker does not detach the original buffer
+                const data = buffer instanceof Uint8Array
+                    ? new Uint8Array(buffer)
+                    : new Uint8Array(buffer);
+
+                const pdf = await pdfjsLib.getDocument({ data }).promise;
                 const page = await pdf.getPage(1);
                 const viewport = page.getViewport({ scale: 0.3 });
-                const canvas = document.getElementById('merge-thumb-' + i);
-                if (!canvas) continue;
                 const ctx = canvas.getContext('2d');
+
+                // Ensure canvas dimensions are set
                 canvas.width = viewport.width;
                 canvas.height = viewport.height;
+
+                // Render the page
                 await page.render({ canvasContext: ctx, viewport: viewport }).promise;
             } catch (err) {
                 console.error('Merge thumb error file ' + i, err);
             }
-        }
+        });
+
+        // Wait for all renders to complete
+        await Promise.all(renderPromises);
     }
 
     function handleDragStart(e) {
